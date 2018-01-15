@@ -34,6 +34,18 @@ class CheckKernelVersion < Sensu::Plugin::Check::CLI
 
   def run
     current_kernel = `uname --kernel-release`.chomp
+
+    # First make sure the system is configured to use the LTS kernel
+    stdout, stderr, status = Open3.capture3([
+      'dpkg-query',
+      '--status',
+      'linux-generic'].shelljoin)
+
+    if !status.success?
+      warning([stderr.each_line.first.chomp, "Running non-LTS kernel #{current_kernel}"].join("\n"))
+    end
+
+    # Then check that the running kernel is up to date
     stdout, stderr, status = Open3.capture3([
       'dpkg',
       '--compare-versions',
